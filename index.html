@@ -3,11 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>QR-сканер для Android</title>
+    <title>QR-сканер для Яндекс.Браузера</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
-    <!-- SheetJS для работы с Excel -->
-    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
     <style>
         :root {
             --primary: #4CAF50;
@@ -17,44 +15,33 @@
             --light: #f5f5f5;
         }
         
-        * {
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-        
         body {
-            font-family: 'Roboto', sans-serif;
+            font-family: Arial, sans-serif;
             margin: 0;
-            padding: 0;
+            padding: 15px;
             background-color: var(--light);
             touch-action: manipulation;
         }
         
         .container {
-            width: 100%;
             max-width: 100%;
-            padding: 15px;
-            background-color: white;
-            min-height: 100vh;
+            margin: 0 auto;
         }
         
         h1 {
             text-align: center;
-            color: var(--dark);
             font-size: 1.5rem;
-            margin: 10px 0;
         }
         
         .scanner-container {
             position: relative;
             width: 100%;
-            max-width: 100%;
+            max-width: 400px;
             margin: 15px auto;
             border: 2px solid var(--primary);
             border-radius: 8px;
             overflow: hidden;
             aspect-ratio: 1/1;
-            background-color: #000;
         }
         
         #qr-video {
@@ -63,44 +50,23 @@
             object-fit: cover;
         }
         
-        .result-container {
-            margin: 15px 0;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background-color: white;
-        }
-        
-        #qr-result {
-            word-break: break-all;
-            padding: 10px;
-            background-color: #f9f9f9;
-            border-radius: 4px;
-            min-height: 60px;
-        }
-        
         .controls {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
-            margin-top: 15px;
+            margin: 15px 0;
         }
         
         button {
-            padding: 14px;
+            padding: 12px;
             border: none;
             border-radius: 8px;
             font-size: 16px;
             font-weight: bold;
-            transition: all 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
-        }
-        
-        button:active {
-            transform: scale(0.98);
         }
         
         #start-button {
@@ -119,9 +85,16 @@
             color: white;
         }
         
-        button:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
+        .hidden {
+            display: none !important;
+        }
+        
+        #result {
+            margin-top: 15px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            word-break: break-all;
         }
         
         .table-container {
@@ -144,104 +117,16 @@
         
         th {
             background-color: #f2f2f2;
-            position: sticky;
-            top: 0;
-        }
-        
-        /* Модальное окно для Android */
-        .modal-android {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0,0,0,0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            padding: 15px;
-        }
-        
-        .modal-content-android {
-            background-color: white;
-            width: 100%;
-            max-width: 400px;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-        }
-        
-        .modal-header-android {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        
-        .modal-title-android {
-            font-size: 18px;
-            font-weight: bold;
-        }
-        
-        .modal-close-android {
-            background: none;
-            border: none;
-            font-size: 24px;
-            color: #666;
-        }
-        
-        .share-options-android {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 12px;
-        }
-        
-        .share-btn-android {
-            padding: 14px;
-            border-radius: 8px;
-            color: white;
-            font-size: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            border: none;
-        }
-        
-        .share-btn-android i {
-            font-size: 20px;
-        }
-        
-        .btn-whatsapp {
-            background-color: #25D366;
-        }
-        
-        .btn-email {
-            background-color: #D44638;
-        }
-        
-        .btn-excel {
-            background-color: #217346;
-        }
-        
-        .hidden {
-            display: none !important;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>QR-сканер для Android</h1>
+        <h1>QR-сканер для Яндекс.Браузера</h1>
         
         <div class="scanner-container">
             <video id="qr-video" playsinline></video>
             <canvas id="qr-canvas" hidden></canvas>
-        </div>
-        
-        <div class="result-container">
-            <h3>Результат:</h3>
-            <div id="qr-result">Наведите камеру на QR-код</div>
         </div>
         
         <div class="controls">
@@ -252,12 +137,13 @@
                 <i class="fas fa-stop"></i> Стоп
             </button>
             <button id="share-button" class="hidden">
-                <i class="fas fa-share-alt"></i> Поделиться
+                <i class="fas fa-file-excel"></i> Экспорт в Excel
             </button>
         </div>
-
+        
+        <div id="result">Наведите камеру на QR-код</div>
+        
         <div class="table-container">
-            <h3>История сканирований</h3>
             <table id="results-table">
                 <thead>
                     <tr>
@@ -276,95 +162,33 @@
         </div>
     </div>
 
-    <!-- Модальное окно для Android -->
-    <div id="share-modal-android" class="modal-android hidden">
-        <div class="modal-content-android">
-            <div class="modal-header-android">
-                <div class="modal-title-android">Экспорт результатов</div>
-                <button class="modal-close-android">&times;</button>
-            </div>
-            <div class="share-options-android">
-                <button id="share-whatsapp-android" class="share-btn-android btn-whatsapp">
-                    <i class="fab fa-whatsapp"></i> WhatsApp
-                </button>
-                <button id="share-email-android" class="share-btn-android btn-email">
-                    <i class="fas fa-envelope"></i> Email
-                </button>
-                <button id="share-excel-android" class="share-btn-android btn-excel">
-                    <i class="fas fa-file-excel"></i> Excel
-                </button>
-            </div>
-        </div>
-    </div>
-
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Элементы интерфейса
             const video = document.getElementById('qr-video');
             const canvas = document.getElementById('qr-canvas');
-            const resultDiv = document.getElementById('qr-result');
+            const resultDiv = document.getElementById('result');
             const startButton = document.getElementById('start-button');
             const stopButton = document.getElementById('stop-button');
             const shareButton = document.getElementById('share-button');
             const tableBody = document.getElementById('table-body');
             
-            // Элементы модального окна Android
-            const shareModalAndroid = document.getElementById('share-modal-android');
-            const closeButtonAndroid = document.querySelector('.modal-close-android');
-            const whatsappButtonAndroid = document.getElementById('share-whatsapp-android');
-            const emailButtonAndroid = document.getElementById('share-email-android');
-            const excelButtonAndroid = document.getElementById('share-excel-android');
-            
-            // Переменные состояния
             let scanning = false;
             let stream = null;
             let scanResults = [];
-            let lastScannedData = null;
-            let lastScanTime = 0;
-            const SCAN_COOLDOWN = 15000; // 15 секунд задержки
             
             // Инициализация
             initEventListeners();
             
             function initEventListeners() {
-                // Основные кнопки
                 startButton.addEventListener('click', startScanning);
                 stopButton.addEventListener('click', stopScanning);
-                shareButton.addEventListener('click', showShareModal);
-                
-                // Модальное окно Android
-                closeButtonAndroid.addEventListener('click', hideShareModal);
-                whatsappButtonAndroid.addEventListener('click', shareViaWhatsApp);
-                emailButtonAndroid.addEventListener('click', shareViaEmail);
-                excelButtonAndroid.addEventListener('click', exportToExcelForAndroid);
-                
-                // Закрытие модального окна по клику вне его
-                shareModalAndroid.addEventListener('click', (e) => {
-                    if (e.target === shareModalAndroid) hideShareModal();
-                });
-            }
-            
-            function showShareModal() {
-                if (scanResults.length === 0) {
-                    alert('Нет данных для экспорта! Сначала отсканируйте QR-коды.');
-                    return;
-                }
-                shareModalAndroid.classList.remove('hidden');
-            }
-            
-            function hideShareModal() {
-                shareModalAndroid.classList.add('hidden');
+                shareButton.addEventListener('click', exportToExcel);
             }
             
             async function startScanning() {
                 try {
-                    // Получаем доступ к камере (задняя камера на Android)
                     stream = await navigator.mediaDevices.getUserMedia({ 
-                        video: { 
-                            facingMode: "environment",
-                            width: { ideal: 1280 },
-                            height: { ideal: 720 }
-                        } 
+                        video: { facingMode: "environment" } 
                     });
                     
                     video.srcObject = stream;
@@ -377,25 +201,8 @@
                     scanning = true;
                     scanQR();
                 } catch (err) {
-                    console.error("Ошибка доступа к камере:", err);
-                    resultDiv.textContent = "Ошибка: " + (err.message || "Не удалось получить доступ к камере");
-                    
-                    // Попробуем без указания камеры, если facingMode не поддерживается
-                    if (err.name === 'OverconstrainedError') {
-                        try {
-                            stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                            video.srcObject = stream;
-                            await video.play();
-                            
-                            scanning = true;
-                            startButton.classList.add('hidden');
-                            stopButton.classList.remove('hidden');
-                            shareButton.classList.remove('hidden');
-                            scanQR();
-                        } catch (err2) {
-                            console.error("Ошибка доступа к камере (вторая попытка):", err2);
-                        }
-                    }
+                    console.error("Ошибка камеры:", err);
+                    resultDiv.textContent = "Ошибка: " + err.message;
                 }
             }
             
@@ -421,17 +228,10 @@
                 
                 try {
                     const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                    const result = jsQR(imageData.data, imageData.width, imageData.height, {
-                        inversionAttempts: "dontInvert",
-                    });
+                    const code = jsQR(imageData.data, imageData.width, imageData.height);
                     
-                    if (result) {
-                        const currentTime = Date.now();
-                        if (result.data !== lastScannedData || (currentTime - lastScanTime) > SCAN_COOLDOWN) {
-                            handleResult(result.data);
-                            lastScannedData = result.data;
-                            lastScanTime = currentTime;
-                        }
+                    if (code) {
+                        processScannedData(code.data);
                     }
                 } catch (e) {
                     console.error("Ошибка сканирования:", e);
@@ -440,9 +240,8 @@
                 requestAnimationFrame(scanQR);
             }
             
-            function handleResult(result) {
-                // Формат: "ФИО  Группа  Льгота"
-                const parts = result.split('  ');
+            function processScannedData(data) {
+                const parts = data.split('  ');
                 const fio = parts[0] || 'Не распознано';
                 const group = parts[1] || 'Не указана';
                 const benefit = parts[2] || 'Не указано';
@@ -457,8 +256,8 @@
                 });
                 
                 updateTable();
-                resultDiv.textContent = result;
-                vibrate(100); // Вибрация на Android
+                resultDiv.textContent = data;
+                vibrate(100);
             }
             
             function updateTable() {
@@ -477,119 +276,49 @@
                 });
             }
             
-            function shareViaWhatsApp() {
-                if (scanResults.length === 0) {
-                    alert('Нет данных для отправки!');
-                    return;
-                }
-                
-                let message = "📊 Результаты сканирования QR-кодов:\n\n";
-                message += "№ | ФИО | Группа | Льгота | Дата | Время\n";
-                message += "-----------------------------------------\n";
-                
-                scanResults.forEach((result, index) => {
-                    message += `${index + 1}. ${result.fio} | ${result.group} | ${result.benefit} | ${result.date} ${result.time}\n`;
-                });
-                
-                const encodedMessage = encodeURIComponent(message);
-                window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
-                hideShareModal();
-            }
-            
-            function shareViaEmail() {
-                if (scanResults.length === 0) {
-                    alert('Нет данных для отправки!');
-                    return;
-                }
-                
-                let message = "Результаты сканирования QR-кодов:\n\n";
-                message += "№;ФИО;Группа;Льгота;Дата;Время\n"; // CSV формат для Excel
-                
-                scanResults.forEach((result, index) => {
-                    message += `${index + 1};${result.fio};${result.group};${result.benefit};${result.date};${result.time}\n`;
-                });
-                
-                const subject = "Результаты сканирования QR-кодов";
-                const body = encodeURIComponent(message);
-                window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${body}`, '_blank');
-                hideShareModal();
-            }
-            
-            function exportToExcelForAndroid() {
+            function exportToExcel() {
                 if (scanResults.length === 0) {
                     alert('Нет данных для экспорта!');
                     return;
                 }
                 
-                try {
-                    // Подготовка данных для Excel
-                    const excelData = [
-                        ["№", "ФИО", "Группа", "Льгота", "Дата", "Время"], // Заголовки
-                        ...scanResults.map((result, index) => [
-                            index + 1,
-                            result.fio,
-                            result.group,
-                            result.benefit,
-                            result.date,
-                            result.time
-                        ])
-                    ];
-                    
-                    // Создание рабочей книги
-                    const wb = XLSX.utils.book_new();
-                    const ws = XLSX.utils.aoa_to_sheet(excelData);
-                    
-                    // Настройка ширины столбцов для мобильных устройств
-                    ws['!cols'] = [
-                        { wch: 5 },   // №
-                        { wch: 25 },  // ФИО
-                        { wch: 12 },  // Группа
-                        { wch: 12 },  // Льгота
-                        { wch: 10 },  // Дата
-                        { wch: 8 }    // Время
-                    ];
-                    
-                    // Генерация файла с датой в названии
-                    const fileName = `QR_scan_${new Date().toISOString().slice(0, 10)}.xlsx`;
-                    
-                    // Попытка использовать API файловой системы (для Chrome на Android)
-                    if (window.showSaveFilePicker) {
-                        window.showSaveFilePicker({
-                            suggestedName: fileName,
-                            types: [{
-                                description: 'Excel Files',
-                                accept: {
-                                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx']
-                                }
-                            }]
-                        }).then(fileHandle => {
-                            return fileHandle.createWritable().then(writable => {
-                                const blob = new Blob([XLSX.write(wb, {bookType: 'xlsx', type: 'array'})], 
-                                    {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-                                return writable.write(blob).then(() => writable.close());
-                            });
-                        }).then(() => {
-                            console.log('Файл сохранен');
-                            hideShareModal();
-                        }).catch(err => {
-                            console.error('Ошибка сохранения:', err);
-                            // Fallback для браузеров без showSaveFilePicker
-                            XLSX.writeFile(wb, fileName);
-                        });
-                    } else {
-                        // Стандартный метод для других браузеров
-                        XLSX.writeFile(wb, fileName);
+                // Создаем CSV содержимое
+                let csvContent = "№,ФИО,Группа,Льгота,Дата,Время\n";
+                
+                scanResults.forEach((result, index) => {
+                    csvContent += `${index + 1},"${result.fio}","${result.group}","${result.benefit}","${result.date}","${result.time}"\n`;
+                });
+                
+                // Создаем Blob с CSV данными
+                const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+                
+                // Создаем ссылку для скачивания
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                
+                link.setAttribute('href', url);
+                link.setAttribute('download', `qr_results_${new Date().toISOString().slice(0, 10)}.csv`);
+                link.style.visibility = 'hidden';
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Альтернативный вариант для Яндекс.Браузера
+                setTimeout(() => {
+                    try {
+                        const fileReader = new FileReader();
+                        fileReader.onload = function() {
+                            window.open(`data:text/csv;charset=utf-8,${encodeURIComponent(fileReader.result)}`);
+                        };
+                        fileReader.readAsText(blob);
+                    } catch (e) {
+                        console.error("Ошибка при открытии CSV:", e);
                     }
-                    
-                    hideShareModal();
-                } catch (error) {
-                    console.error('Ошибка при экспорте в Excel:', error);
-                    alert('Произошла ошибка при создании Excel файла');
-                }
+                }, 100);
             }
             
             function vibrate(duration) {
-                // Вибрация для мобильных устройств
                 if ('vibrate' in navigator) {
                     try {
                         navigator.vibrate(duration);
@@ -603,8 +332,7 @@
             function addTestData() {
                 const testData = [
                     "Иванов Иван Иванович  Группа-101  Льгота-1",
-                    "Петров Петр Петрович  Группа-102  Льгота-2",
-                    "Сидорова Анна Михайловна  Группа-103  Льгота-3"
+                    "Петров Петр Петрович  Группа-102  Льгота-2"
                 ];
                 
                 testData.forEach(data => {
