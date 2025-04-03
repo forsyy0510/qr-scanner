@@ -2,86 +2,154 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QR-сканер с таблицей</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>QR-сканер для Android</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <!-- SheetJS для работы с Excel -->
     <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            text-align: center;
+        :root {
+            --primary: #4CAF50;
+            --secondary: #2196F3;
+            --danger: #f44336;
+            --dark: #333;
+            --light: #f5f5f5;
         }
-
-        #scanner-container {
+        
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--light);
+            touch-action: manipulation;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 100%;
+            padding: 15px;
+            background-color: white;
+            min-height: 100vh;
+        }
+        
+        h1 {
+            text-align: center;
+            color: var(--dark);
+            font-size: 1.5rem;
+            margin: 10px 0;
+        }
+        
+        .scanner-container {
             position: relative;
             width: 100%;
-            max-width: 400px;
-            margin: 20px auto;
+            max-width: 100%;
+            margin: 15px auto;
+            border: 2px solid var(--primary);
+            border-radius: 8px;
+            overflow: hidden;
+            aspect-ratio: 1/1;
+            background-color: #000;
         }
-
+        
         #qr-video {
             width: 100%;
-            border: 2px solid #333;
-            border-radius: 8px;
+            height: 100%;
+            object-fit: cover;
         }
-
-        #qr-canvas {
-            display: none;
-        }
-
-        #result {
-            margin-top: 10px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            min-height: 20px;
-            word-break: break-all;
-        }
-
-        .buttons {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            flex-wrap: wrap;
+        
+        .result-container {
             margin: 15px 0;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: white;
         }
-
-        button {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 16px;
-            cursor: pointer;
+        
+        #qr-result {
+            word-break: break-all;
+            padding: 10px;
+            background-color: #f9f9f9;
             border-radius: 4px;
-            transition: background-color 0.3s;
+            min-height: 60px;
         }
-
-        button:hover {
-            opacity: 0.9;
+        
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
         }
-
+        
+        button {
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        button:active {
+            transform: scale(0.98);
+        }
+        
+        #start-button {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        #stop-button {
+            background-color: var(--danger);
+            color: white;
+        }
+        
+        #share-button {
+            grid-column: span 2;
+            background-color: var(--secondary);
+            color: white;
+        }
+        
         button:disabled {
             background-color: #cccccc;
             cursor: not-allowed;
         }
-
-        #share-button {
-            background-color: #2196F3;
+        
+        .table-container {
+            margin-top: 20px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
-
-        .hidden {
-            display: none !important;
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
         }
-
-        .modal-overlay {
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        th {
+            background-color: #f2f2f2;
+            position: sticky;
+            top: 0;
+        }
+        
+        /* Модальное окно для Android */
+        .modal-android {
             position: fixed;
             top: 0;
             left: 0;
@@ -92,152 +160,141 @@
             justify-content: center;
             align-items: center;
             z-index: 1000;
+            padding: 15px;
         }
-
-        .modal-content {
+        
+        .modal-content-android {
             background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            width: 90%;
+            width: 100%;
             max-width: 400px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
         }
-
-        .modal-header {
+        
+        .modal-header-android {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
-
-        .modal-close {
+        
+        .modal-title-android {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .modal-close-android {
             background: none;
             border: none;
             font-size: 24px;
-            cursor: pointer;
             color: #666;
         }
-
-        .share-options {
+        
+        .share-options-android {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 10px;
+            gap: 12px;
         }
-
-        .share-btn {
-            padding: 12px;
-            border-radius: 6px;
+        
+        .share-btn-android {
+            padding: 14px;
+            border-radius: 8px;
             color: white;
             font-size: 16px;
-            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
             border: none;
         }
-
-        .share-btn i {
+        
+        .share-btn-android i {
             font-size: 20px;
         }
-
+        
         .btn-whatsapp {
             background-color: #25D366;
         }
-
+        
         .btn-email {
             background-color: #D44638;
         }
-
+        
         .btn-excel {
             background-color: #217346;
         }
-
-        #table-container {
-            margin-top: 30px;
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-
-        th {
-            background-color: #f2f2f2;
-            position: sticky;
-            top: 0;
-        }
-
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
+        
+        .hidden {
+            display: none !important;
         }
     </style>
 </head>
 <body>
-    <h1>QR-сканер</h1>
-    <p>Наведите камеру на QR-код для сканирования</p>
-    
-    <div id="scanner-container">
-        <video id="qr-video" playsinline></video>
-        <canvas id="qr-canvas"></canvas>
-    </div>
-    
-    <div id="result-container" class="hidden">
-        <h3>Последний отсканированный код:</h3>
-        <div id="result"></div>
-    </div>
-    
-    <div class="buttons">
-        <button id="start-button"><i class="fas fa-play"></i> Начать</button>
-        <button id="stop-button" class="hidden"><i class="fas fa-stop"></i> Стоп</button>
-        <button id="share-button" class="hidden"><i class="fas fa-share-alt"></i> Поделиться</button>
+    <div class="container">
+        <h1>QR-сканер для Android</h1>
+        
+        <div class="scanner-container">
+            <video id="qr-video" playsinline></video>
+            <canvas id="qr-canvas" hidden></canvas>
+        </div>
+        
+        <div class="result-container">
+            <h3>Результат:</h3>
+            <div id="qr-result">Наведите камеру на QR-код</div>
+        </div>
+        
+        <div class="controls">
+            <button id="start-button">
+                <i class="fas fa-play"></i> Начать
+            </button>
+            <button id="stop-button" class="hidden">
+                <i class="fas fa-stop"></i> Стоп
+            </button>
+            <button id="share-button" class="hidden">
+                <i class="fas fa-share-alt"></i> Поделиться
+            </button>
+        </div>
+
+        <div class="table-container">
+            <h3>История сканирований</h3>
+            <table id="results-table">
+                <thead>
+                    <tr>
+                        <th>№</th>
+                        <th>ФИО</th>
+                        <th>Группа</th>
+                        <th>Льгота</th>
+                        <th>Дата</th>
+                        <th>Время</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body">
+                    <!-- Данные будут здесь -->
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <div id="share-modal" class="modal-overlay hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Поделиться результатами</h3>
-                <button class="modal-close">&times;</button>
+    <!-- Модальное окно для Android -->
+    <div id="share-modal-android" class="modal-android hidden">
+        <div class="modal-content-android">
+            <div class="modal-header-android">
+                <div class="modal-title-android">Экспорт результатов</div>
+                <button class="modal-close-android">&times;</button>
             </div>
-            <div class="share-options">
-                <button id="share-whatsapp" class="share-btn btn-whatsapp">
+            <div class="share-options-android">
+                <button id="share-whatsapp-android" class="share-btn-android btn-whatsapp">
                     <i class="fab fa-whatsapp"></i> WhatsApp
                 </button>
-                <button id="share-email" class="share-btn btn-email">
+                <button id="share-email-android" class="share-btn-android btn-email">
                     <i class="fas fa-envelope"></i> Email
                 </button>
-                <button id="share-excel" class="share-btn btn-excel">
+                <button id="share-excel-android" class="share-btn-android btn-excel">
                     <i class="fas fa-file-excel"></i> Excel
                 </button>
             </div>
         </div>
-    </div>
-    
-    <div id="table-container">
-        <h2>Таблица результатов</h2>
-        <table id="results-table">
-            <thead>
-                <tr>
-                    <th>№</th>
-                    <th>ФИО</th>
-                    <th>Группа</th>
-                    <th>Льгота</th>
-                    <th>Дата</th>
-                    <th>Время</th>
-                </tr>
-            </thead>
-            <tbody id="table-body">
-                <!-- Данные будут здесь -->
-            </tbody>
-        </table>
     </div>
 
     <script>
@@ -245,17 +302,18 @@
             // Элементы интерфейса
             const video = document.getElementById('qr-video');
             const canvas = document.getElementById('qr-canvas');
-            const resultDiv = document.getElementById('result');
+            const resultDiv = document.getElementById('qr-result');
             const startButton = document.getElementById('start-button');
             const stopButton = document.getElementById('stop-button');
             const shareButton = document.getElementById('share-button');
-            const resultContainer = document.getElementById('result-container');
             const tableBody = document.getElementById('table-body');
-            const shareModal = document.getElementById('share-modal');
-            const closeButton = document.querySelector('.modal-close');
-            const whatsappButton = document.getElementById('share-whatsapp');
-            const emailButton = document.getElementById('share-email');
-            const excelButton = document.getElementById('share-excel');
+            
+            // Элементы модального окна Android
+            const shareModalAndroid = document.getElementById('share-modal-android');
+            const closeButtonAndroid = document.querySelector('.modal-close-android');
+            const whatsappButtonAndroid = document.getElementById('share-whatsapp-android');
+            const emailButtonAndroid = document.getElementById('share-email-android');
+            const excelButtonAndroid = document.getElementById('share-excel-android');
             
             // Переменные состояния
             let scanning = false;
@@ -274,15 +332,15 @@
                 stopButton.addEventListener('click', stopScanning);
                 shareButton.addEventListener('click', showShareModal);
                 
-                // Модальное окно
-                closeButton.addEventListener('click', hideShareModal);
-                whatsappButton.addEventListener('click', shareViaWhatsApp);
-                emailButton.addEventListener('click', shareViaEmail);
-                excelButton.addEventListener('click', exportToExcel);
+                // Модальное окно Android
+                closeButtonAndroid.addEventListener('click', hideShareModal);
+                whatsappButtonAndroid.addEventListener('click', shareViaWhatsApp);
+                emailButtonAndroid.addEventListener('click', shareViaEmail);
+                excelButtonAndroid.addEventListener('click', exportToExcelForAndroid);
                 
                 // Закрытие модального окна по клику вне его
-                shareModal.addEventListener('click', (e) => {
-                    if (e.target === shareModal) hideShareModal();
+                shareModalAndroid.addEventListener('click', (e) => {
+                    if (e.target === shareModalAndroid) hideShareModal();
                 });
             }
             
@@ -291,33 +349,30 @@
                     alert('Нет данных для экспорта! Сначала отсканируйте QR-коды.');
                     return;
                 }
-                shareModal.classList.remove('hidden');
+                shareModalAndroid.classList.remove('hidden');
             }
             
             function hideShareModal() {
-                shareModal.classList.add('hidden');
+                shareModalAndroid.classList.add('hidden');
             }
             
             async function startScanning() {
                 try {
-                    // Получаем доступ к камере
-                    stream = await navigator.mediaDevices.getUserMedia({
+                    // Получаем доступ к камере (задняя камера на Android)
+                    stream = await navigator.mediaDevices.getUserMedia({ 
                         video: { 
                             facingMode: "environment",
                             width: { ideal: 1280 },
                             height: { ideal: 720 }
-                        },
-                        audio: false
+                        } 
                     });
                     
                     video.srcObject = stream;
                     await video.play();
                     
-                    // Обновляем интерфейс
                     startButton.classList.add('hidden');
                     stopButton.classList.remove('hidden');
                     shareButton.classList.remove('hidden');
-                    resultContainer.classList.add('hidden');
                     
                     scanning = true;
                     scanQR();
@@ -336,7 +391,6 @@
                             startButton.classList.add('hidden');
                             stopButton.classList.remove('hidden');
                             shareButton.classList.remove('hidden');
-                            resultContainer.classList.add('hidden');
                             scanQR();
                         } catch (err2) {
                             console.error("Ошибка доступа к камере (вторая попытка):", err2);
@@ -359,22 +413,23 @@
             function scanQR() {
                 if (!scanning) return;
                 
-                canvas.height = video.videoHeight;
                 canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                
                 const context = canvas.getContext('2d');
                 context.drawImage(video, 0, 0, canvas.width, canvas.height);
                 
                 try {
                     const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    const result = jsQR(imageData.data, imageData.width, imageData.height, {
                         inversionAttempts: "dontInvert",
                     });
                     
-                    if (code) {
+                    if (result) {
                         const currentTime = Date.now();
-                        if (code.data !== lastScannedData || (currentTime - lastScanTime) > SCAN_COOLDOWN) {
-                            processScannedData(code.data);
-                            lastScannedData = code.data;
+                        if (result.data !== lastScannedData || (currentTime - lastScanTime) > SCAN_COOLDOWN) {
+                            handleResult(result.data);
+                            lastScannedData = result.data;
                             lastScanTime = currentTime;
                         }
                     }
@@ -385,9 +440,9 @@
                 requestAnimationFrame(scanQR);
             }
             
-            function processScannedData(data) {
+            function handleResult(result) {
                 // Формат: "ФИО  Группа  Льгота"
-                const parts = data.split('  ');
+                const parts = result.split('  ');
                 const fio = parts[0] || 'Не распознано';
                 const group = parts[1] || 'Не указана';
                 const benefit = parts[2] || 'Не указано';
@@ -402,9 +457,8 @@
                 });
                 
                 updateTable();
-                resultDiv.textContent = data;
-                resultContainer.classList.remove('hidden');
-                playBeep();
+                resultDiv.textContent = result;
+                vibrate(100); // Вибрация на Android
             }
             
             function updateTable() {
@@ -449,21 +503,11 @@
                 }
                 
                 let message = "Результаты сканирования QR-кодов:\n\n";
-                message += "<table border='1' style='border-collapse:collapse;'>";
-                message += "<tr><th>№</th><th>ФИО</th><th>Группа</th><th>Льгота</th><th>Дата</th><th>Время</th></tr>";
+                message += "№;ФИО;Группа;Льгота;Дата;Время\n"; // CSV формат для Excel
                 
                 scanResults.forEach((result, index) => {
-                    message += `<tr>
-                        <td>${index + 1}</td>
-                        <td>${result.fio}</td>
-                        <td>${result.group}</td>
-                        <td>${result.benefit}</td>
-                        <td>${result.date}</td>
-                        <td>${result.time}</td>
-                    </tr>`;
+                    message += `${index + 1};${result.fio};${result.group};${result.benefit};${result.date};${result.time}\n`;
                 });
-                
-                message += "</table>";
                 
                 const subject = "Результаты сканирования QR-кодов";
                 const body = encodeURIComponent(message);
@@ -471,7 +515,7 @@
                 hideShareModal();
             }
             
-            function exportToExcel() {
+            function exportToExcelForAndroid() {
                 if (scanResults.length === 0) {
                     alert('Нет данных для экспорта!');
                     return;
@@ -495,22 +539,47 @@
                     const wb = XLSX.utils.book_new();
                     const ws = XLSX.utils.aoa_to_sheet(excelData);
                     
-                    // Настройка ширины столбцов
+                    // Настройка ширины столбцов для мобильных устройств
                     ws['!cols'] = [
-                        { wch: 5 },  // №
-                        { wch: 30 }, // ФИО
-                        { wch: 15 }, // Группа
-                        { wch: 15 }, // Льгота
-                        { wch: 12 }, // Дата
-                        { wch: 10 }  // Время
+                        { wch: 5 },   // №
+                        { wch: 25 },  // ФИО
+                        { wch: 12 },  // Группа
+                        { wch: 12 },  // Льгота
+                        { wch: 10 },  // Дата
+                        { wch: 8 }    // Время
                     ];
                     
-                    // Добавление листа в книгу
-                    XLSX.utils.book_append_sheet(wb, ws, "Результаты");
+                    // Генерация файла с датой в названии
+                    const fileName = `QR_scan_${new Date().toISOString().slice(0, 10)}.xlsx`;
                     
-                    // Генерация файла
-                    const fileName = `QR_результаты_${new Date().toISOString().slice(0, 10)}.xlsx`;
-                    XLSX.writeFile(wb, fileName);
+                    // Попытка использовать API файловой системы (для Chrome на Android)
+                    if (window.showSaveFilePicker) {
+                        window.showSaveFilePicker({
+                            suggestedName: fileName,
+                            types: [{
+                                description: 'Excel Files',
+                                accept: {
+                                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx']
+                                }
+                            }]
+                        }).then(fileHandle => {
+                            return fileHandle.createWritable().then(writable => {
+                                const blob = new Blob([XLSX.write(wb, {bookType: 'xlsx', type: 'array'})], 
+                                    {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+                                return writable.write(blob).then(() => writable.close());
+                            });
+                        }).then(() => {
+                            console.log('Файл сохранен');
+                            hideShareModal();
+                        }).catch(err => {
+                            console.error('Ошибка сохранения:', err);
+                            // Fallback для браузеров без showSaveFilePicker
+                            XLSX.writeFile(wb, fileName);
+                        });
+                    } else {
+                        // Стандартный метод для других браузеров
+                        XLSX.writeFile(wb, fileName);
+                    }
                     
                     hideShareModal();
                 } catch (error) {
@@ -519,23 +588,14 @@
                 }
             }
             
-            function playBeep() {
-                try {
-                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    const oscillator = audioContext.createOscillator();
-                    const gainNode = audioContext.createGain();
-                    
-                    oscillator.connect(gainNode);
-                    gainNode.connect(audioContext.destination);
-                    
-                    gainNode.gain.value = 0.1;
-                    oscillator.frequency.value = 520;
-                    oscillator.type = 'sine';
-                    
-                    oscillator.start();
-                    setTimeout(() => oscillator.stop(), 200);
-                } catch (e) {
-                    console.log("Ошибка звука:", e);
+            function vibrate(duration) {
+                // Вибрация для мобильных устройств
+                if ('vibrate' in navigator) {
+                    try {
+                        navigator.vibrate(duration);
+                    } catch (e) {
+                        console.log("Ошибка вибрации:", e);
+                    }
                 }
             }
             
@@ -561,7 +621,6 @@
                 });
                 
                 updateTable();
-                resultContainer.classList.remove('hidden');
                 shareButton.classList.remove('hidden');
             }
             
