@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>QR-сканер для Яндекс.Браузера</title>
+    <title>QR-сканер с экспортом в XLSX</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         :root {
             --primary: #4CAF50;
@@ -79,9 +80,9 @@
             color: white;
         }
         
-        #share-button {
+        #export-button {
             grid-column: span 2;
-            background-color: var(--secondary);
+            background-color: #217346;
             color: white;
         }
         
@@ -122,7 +123,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>QR-сканер для Яндекс.Браузера</h1>
+        <h1>QR-сканер с экспортом в Excel</h1>
         
         <div class="scanner-container">
             <video id="qr-video" playsinline></video>
@@ -136,8 +137,8 @@
             <button id="stop-button" class="hidden">
                 <i class="fas fa-stop"></i> Стоп
             </button>
-            <button id="share-button" class="hidden">
-                <i class="fas fa-file-excel"></i> Экспорт в Excel
+            <button id="export-button" class="hidden">
+                <i class="fas fa-file-excel"></i> Экспорт в XLSX
             </button>
         </div>
         
@@ -169,7 +170,7 @@
             const resultDiv = document.getElementById('result');
             const startButton = document.getElementById('start-button');
             const stopButton = document.getElementById('stop-button');
-            const shareButton = document.getElementById('share-button');
+            const exportButton = document.getElementById('export-button');
             const tableBody = document.getElementById('table-body');
             
             let scanning = false;
@@ -182,7 +183,7 @@
             function initEventListeners() {
                 startButton.addEventListener('click', startScanning);
                 stopButton.addEventListener('click', stopScanning);
-                shareButton.addEventListener('click', exportToExcel);
+                exportButton.addEventListener('click', exportToExcel);
             }
             
             async function startScanning() {
@@ -196,7 +197,7 @@
                     
                     startButton.classList.add('hidden');
                     stopButton.classList.remove('hidden');
-                    shareButton.classList.remove('hidden');
+                    exportButton.classList.remove('hidden');
                     
                     scanning = true;
                     scanQR();
@@ -282,40 +283,86 @@
                     return;
                 }
                 
-                // Создаем CSV содержимое
-                let csvContent = "№,ФИО,Группа,Льгота,Дата,Время\n";
-                
-                scanResults.forEach((result, index) => {
-                    csvContent += `${index + 1},"${result.fio}","${result.group}","${result.benefit}","${result.date}","${result.time}"\n`;
-                });
-                
-                // Создаем Blob с CSV данными
-                const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
-                
-                // Создаем ссылку для скачивания
-                const link = document.createElement('a');
-                const url = URL.createObjectURL(blob);
-                
-                link.setAttribute('href', url);
-                link.setAttribute('download', `qr_results_${new Date().toISOString().slice(0, 10)}.csv`);
-                link.style.visibility = 'hidden';
-                
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                // Альтернативный вариант для Яндекс.Браузера
-                setTimeout(() => {
+                try {
+                    // Подготовка данных
+                    const excelData = [
+                        ["№", "ФИО", "Группа", "Льгота", "Дата", "Время"],
+                        ...scanResults.map((item, index) => [
+                            index + 1,
+                            item.fio,
+                            item.group,
+                            item.benefit,
+                            item.date,
+                            item.time
+                        ])
+                    ];
+                    
+                    // Создание книги
+                    const wb = XLSX.utils.book_new();
+                    const ws = XLSX.utils.aoa_to_sheet(excelData);
+                    
+                    // Настройка ширины столбцов
+                    ws['!cols'] = [
+                        { wch: 5 },
+                        { wch: 25 },
+                        { wch: 15 },
+                        { wch: 15 },
+                        { wch: 12 },
+                        { wch: 10 }
+                    ];
+                    
+                    // Добавление листа
+                    XLSX.utils.book_append_sheet(wb, ws, "Результаты");
+                    
+                    // Генерация файла
+                    const fileName = `qr_results_${new Date().toISOString().slice(0, 10)}.xlsx`;
+                    
+                    // Универсальный метод экспорта для Яндекс.Браузера
+                    const excelBlob = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+                    saveAsExcel(excelBlob, fileName);
+                    
+                } catch (error) {
+                    console.error('Ошибка при экспорте:', error);
+                    alert('Произошла ошибка при создании файла');
+                }
+            }
+            
+            function saveAsExcel(data, filename) {
+                try {
+                    // Попробуем стандартный метод
+                    const blob = new Blob([data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    
+                    setTimeout(() => {
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    }, 100);
+                    
+                } catch (e) {
+                    console.log('Стандартный метод не сработал, пробуем альтернативный...');
+                    
+                    // Альтернативный метод для Яндекс.Браузера
                     try {
-                        const fileReader = new FileReader();
-                        fileReader.onload = function() {
-                            window.open(`data:text/csv;charset=utf-8,${encodeURIComponent(fileReader.result)}`);
+                        const blob = new Blob([data], { type: 'application/octet-stream' });
+                        const reader = new FileReader();
+                        
+                        reader.onload = function(e) {
+                            const base64data = btoa(String.fromCharCode.apply(null, new Uint8Array(e.target.result)));
+                            window.open(`data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${base64data}`);
                         };
-                        fileReader.readAsText(blob);
-                    } catch (e) {
-                        console.error("Ошибка при открытии CSV:", e);
+                        
+                        reader.readAsArrayBuffer(blob);
+                    } catch (e2) {
+                        console.error('Ошибка альтернативного метода:', e2);
+                        alert('Не удалось экспортировать файл. Попробуйте другой браузер.');
                     }
-                }, 100);
+                }
             }
             
             function vibrate(duration) {
@@ -332,7 +379,8 @@
             function addTestData() {
                 const testData = [
                     "Иванов Иван Иванович  Группа-101  Льгота-1",
-                    "Петров Петр Петрович  Группа-102  Льгота-2"
+                    "Петров Петр Петрович  Группа-102  Льгота-2",
+                    "Сидорова Анна Михайловна  Группа-103  Льгота-3"
                 ];
                 
                 testData.forEach(data => {
@@ -349,7 +397,7 @@
                 });
                 
                 updateTable();
-                shareButton.classList.remove('hidden');
+                exportButton.classList.remove('hidden');
             }
             
             // Раскомментируйте для тестирования без сканирования
