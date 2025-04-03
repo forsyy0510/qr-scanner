@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR-сканер с таблицей</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+
+        #scanner-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin: 20px auto;
+        }
+
+        #qr-video {
+            width: 100%;
+            border: 2px solid #333;
+            border-radius: 8px;
+        }
+
+        #qr-canvas {
+            display: none;
+        }
+
+        #result {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            min-height: 20px;
+            word-break: break-all;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        #share-button {
+            background-color: #2196F3;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .share-options {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .share-btn {
+            padding: 12px;
+            border-radius: 6px;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            border: none;
+        }
+
+        .share-btn i {
+            font-size: 20px;
+        }
+
+        .btn-whatsapp {
+            background-color: #25D366;
+        }
+
+        .btn-email {
+            background-color: #D44638;
+        }
+
+        .btn-excel {
+            background-color: #217346;
+        }
+
+        #table-container {
+            margin-top: 30px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+            position: sticky;
+            top: 0;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <h1>QR-сканер</h1>
+    <p>Наведите камеру на QR-код для сканирования</p>
+    
+    <div id="scanner-container">
+        <video id="qr-video" playsinline></video>
+        <canvas id="qr-canvas"></canvas>
+    </div>
+    
+    <div id="result-container" class="hidden">
+        <h3>Последний отсканированный код:</h3>
+        <div id="result"></div>
+    </div>
+    
+    <div class="buttons">
+        <button id="start-button"><i class="fas fa-play"></i> Начать</button>
+        <button id="stop-button" class="hidden"><i class="fas fa-stop"></i> Стоп</button>
+        <button id="share-button" class="hidden"><i class="fas fa-share-alt"></i> Поделиться</button>
+    </div>
+
+    <div id="share-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Поделиться результатами</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="share-options">
+                <button id="share-whatsapp" class="share-btn btn-whatsapp">
+                    <i class="fab fa-whatsapp"></i> WhatsApp
+                </button>
+                <button id="share-email" class="share-btn btn-email">
+                    <i class="fas fa-envelope"></i> Email
+                </button>
+                <button id="share-excel" class="share-btn btn-excel">
+                    <i class="fas fa-file-excel"></i> Excel
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="table-container">
+        <h2>Таблица результатов</h2>
+        <table id="results-table">
+            <thead>
+                <tr>
+                    <th>№</th>
+                    <th>ФИО</th>
+                    <th>Группа</th>
+                    <th>Льгота</th>
+                    <th>Дата</th>
+                    <th>Время</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                <!-- Данные будут здесь -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Элементы интерфейса
+            const video = document.getElementById('qr-video');
+            const canvas = document.getElementById('qr-canvas');
+            const resultDiv = document.getElementById('result');
+            const startButton = document.getElementById('start-button');
+            const stopButton = document.getElementById('stop-button');
+            const shareButton = document.getElementById('share-button');
+            const resultContainer = document.getElementById('result-container');
+            const tableBody = document.getElementById('table-body');
+            const shareModal = document.getElementById('share-modal');
+            const closeButton = document.querySelector('.modal-close');
+            const whatsappButton = document.getElementById('share-whatsapp');
+            const emailButton = document.getElementById('share-email');
+            const excelButton = document.getElementById('share-excel');
+            
+            // Переменные состояния
+            let scanning = false;
+            let stream = null;
+            let scanResults = [];
+            let lastScannedData = null;
+            let lastScanTime = 0;
+            const SCAN_COOLDOWN = 15000; // 15 секунд задержки
+            
+            // Инициализация
+            initEventListeners();
+            
+            function initEventListeners() {
+                // Основные кнопки
+                startButton.addEventListener('click', startScanning);
+                stopButton.addEventListener('click', stopScanning);
+                shareButton.addEventListener('click', showShareModal);
+                
+                // Модальное окно
+                closeButton.addEventListener('click', hideShareModal);
+                whatsappButton.addEventListener('click', shareViaWhatsApp);
+                emailButton.addEventListener('click', shareViaEmail);
+                excelButton.addEventListener('click', exportToExcel);
+                
+                // Закрытие модального окна по клику вне его
+                shareModal.addEventListener('click', (e) => {
+                    if (e.target === shareModal) hideShareModal();
+                });
+            }
+            
+            function showShareModal() {
+                if (scanResults.length === 0) {
+                    alert('Нет данных для экспорта! Сначала отсканируйте QR-коды.');
+                    return;
+                }
+                shareModal.classList.remove('hidden');
+            }
+            
+            function hideShareModal() {
+                shareModal.classList.add('hidden');
+            }
+            
+            async function startScanning() {
+                try {
+                    // Получаем доступ к камере
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        video: { 
+                            facingMode: "environment",
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
+                        },
+                        audio: false
+                    });
+                    
+                    video.srcObject = stream;
+                    await video.play();
+                    
+                    // Обновляем интерфейс
+                    startButton.classList.add('hidden');
+                    stopButton.classList.remove('hidden');
+                    shareButton.classList.remove('hidden');
+                    resultContainer.classList.add('hidden');
+                    
+                    scanning = true;
+                    scanQR();
+                } catch (err) {
+                    console.error("Ошибка доступа к камере:", err);
+                    resultDiv.textContent = "Ошибка: " + (err.message || "Не удалось получить доступ к камере");
+                    
+                    // Попробуем без указания камеры, если facingMode не поддерживается
+                    if (err.name === 'OverconstrainedError') {
+                        try {
+                            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                            video.srcObject = stream;
+                            await video.play();
+                            
+                            scanning = true;
+                            startButton.classList.add('hidden');
+                            stopButton.classList.remove('hidden');
+                            shareButton.classList.remove('hidden');
+                            resultContainer.classList.add('hidden');
+                            scanQR();
+                        } catch (err2) {
+                            console.error("Ошибка доступа к камере (вторая попытка):", err2);
+                        }
+                    }
+                }
+            }
+            
+            function stopScanning() {
+                scanning = false;
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    stream = null;
+                }
+                video.srcObject = null;
+                startButton.classList.remove('hidden');
+                stopButton.classList.add('hidden');
+            }
+            
+            function scanQR() {
+                if (!scanning) return;
+                
+                canvas.height = video.videoHeight;
+                canvas.width = video.videoWidth;
+                const context = canvas.getContext('2d');
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                try {
+                    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                        inversionAttempts: "dontInvert",
+                    });
+                    
+                    if (code) {
+                        const currentTime = Date.now();
+                        if (code.data !== lastScannedData || (currentTime - lastScanTime) > SCAN_COOLDOWN) {
+                            processScannedData(code.data);
+                            lastScannedData = code.data;
+                            lastScanTime = currentTime;
+                        }
+                    }
+                } catch (e) {
+                    console.error("Ошибка сканирования:", e);
+                }
+                
+                requestAnimationFrame(scanQR);
+            }
+            
+            function processScannedData(data) {
+                // Формат: "ФИО  Группа  Льгота"
+                const parts = data.split('  ');
+                const fio = parts[0] || 'Не распознано';
+                const group = parts[1] || 'Не указана';
+                const benefit = parts[2] || 'Не указано';
+                const now = new Date();
+                
+                scanResults.push({
+                    fio,
+                    group,
+                    benefit,
+                    date: now.toLocaleDateString(),
+                    time: now.toLocaleTimeString()
+                });
+                
+                updateTable();
+                resultDiv.textContent = data;
+                resultContainer.classList.remove('hidden');
+                playBeep();
+            }
+            
+            function updateTable() {
+                tableBody.innerHTML = '';
+                scanResults.forEach((result, index) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td>${result.fio}</td>
+                        <td>${result.group}</td>
+                        <td>${result.benefit}</td>
+                        <td>${result.date}</td>
+                        <td>${result.time}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            }
+            
+            function shareViaWhatsApp() {
+                if (scanResults.length === 0) {
+                    alert('Нет данных для отправки!');
+                    return;
+                }
+                
+                let message = "📊 Результаты сканирования QR-кодов:\n\n";
+                message += "№ | ФИО | Группа | Льгота | Дата | Время\n";
+                message += "-----------------------------------------\n";
+                
+                scanResults.forEach((result, index) => {
+                    message += `${index + 1}. ${result.fio} | ${result.group} | ${result.benefit} | ${result.date} ${result.time}\n`;
+                });
+                
+                const encodedMessage = encodeURIComponent(message);
+                window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
+                hideShareModal();
+            }
+            
+            function shareViaEmail() {
+                if (scanResults.length === 0) {
+                    alert('Нет данных для отправки!');
+                    return;
+                }
+                
+                let message = "Результаты сканирования QR-кодов:\n\n";
+                message += "<table border='1' style='border-collapse:collapse;'>";
+                message += "<tr><th>№</th><th>ФИО</th><th>Группа</th><th>Льгота</th><th>Дата</th><th>Время</th></tr>";
+                
+                scanResults.forEach((result, index) => {
+                    message += `<tr>
+                        <td>${index + 1}</td>
+                        <td>${result.fio}</td>
+                        <td>${result.group}</td>
+                        <td>${result.benefit}</td>
+                        <td>${result.date}</td>
+                        <td>${result.time}</td>
+                    </tr>`;
+                });
+                
+                message += "</table>";
+                
+                const subject = "Результаты сканирования QR-кодов";
+                const body = encodeURIComponent(message);
+                window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${body}`, '_blank');
+                hideShareModal();
+            }
+            
+            function exportToExcel() {
+                if (scanResults.length === 0) {
+                    alert('Нет данных для экспорта!');
+                    return;
+                }
+                
+                try {
+                    // Подготовка данных для Excel
+                    const excelData = [
+                        ["№", "ФИО", "Группа", "Льгота", "Дата", "Время"], // Заголовки
+                        ...scanResults.map((result, index) => [
+                            index + 1,
+                            result.fio,
+                            result.group,
+                            result.benefit,
+                            result.date,
+                            result.time
+                        ])
+                    ];
+                    
+                    // Создание рабочей книги
+                    const wb = XLSX.utils.book_new();
+                    const ws = XLSX.utils.aoa_to_sheet(excelData);
+                    
+                    // Настройка ширины столбцов
+                    ws['!cols'] = [
+                        { wch: 5 },  // №
+                        { wch: 30 }, // ФИО
+                        { wch: 15 }, // Группа
+                        { wch: 15 }, // Льгота
+                        { wch: 12 }, // Дата
+                        { wch: 10 }  // Время
+                    ];
+                    
+                    // Добавление листа в книгу
+                    XLSX.utils.book_append_sheet(wb, ws, "Результаты");
+                    
+                    // Генерация файла
+                    const fileName = `QR_результаты_${new Date().toISOString().slice(0, 10)}.xlsx`;
+                    XLSX.writeFile(wb, fileName);
+                    
+                    hideShareModal();
+                } catch (error) {
+                    console.error('Ошибка при экспорте в Excel:', error);
+                    alert('Произошла ошибка при создании Excel файла');
+                }
+            }
+            
+            function playBeep() {
+                try {
+                    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+                    
+                    gainNode.gain.value = 0.1;
+                    oscillator.frequency.value = 520;
+                    oscillator.type = 'sine';
+                    
+                    oscillator.start();
+                    setTimeout(() => oscillator.stop(), 200);
+                } catch (e) {
+                    console.log("Ошибка звука:", e);
+                }
+            }
+            
+            // Для тестирования - добавляем тестовые данные
+            function addTestData() {
+                const testData = [
+                    "Иванов Иван Иванович  Группа-101  Льгота-1",
+                    "Петров Петр Петрович  Группа-102  Льгота-2",
+                    "Сидорова Анна Михайловна  Группа-103  Льгота-3"
+                ];
+                
+                testData.forEach(data => {
+                    const parts = data.split('  ');
+                    const now = new Date();
+                    
+                    scanResults.push({
+                        fio: parts[0],
+                        group: parts[1],
+                        benefit: parts[2],
+                        date: now.toLocaleDateString(),
+                        time: now.toLocaleTimeString()
+                    });
+                });
+                
+                updateTable();
+                resultContainer.classList.remove('hidden');
+                shareButton.classList.remove('hidden');
+            }
+            
+            // Раскомментируйте для тестирования без сканирования
+            // addTestData();
+        });
+    </script>
+</body>
+</html>
