@@ -166,7 +166,7 @@
         </div>
         
         <div class="timer-container">
-            До следующего сканирования: <span id="timer">15</span> сек
+            До следующего сканирования: <span id="timer">55</span> сек
         </div>
         
         <div class="controls">
@@ -223,7 +223,7 @@
             let scanInterval = null;
             let timerInterval = null;
             let secondsLeft = 5;
-            const SCAN_INTERVAL = 5000; // 15 секунд
+            const SCAN_INTERVAL = 5000; // 5 секунд
             
             // Инициализация
             initEventListeners();
@@ -247,7 +247,7 @@
                     stopButton.classList.remove('hidden');
                     exportButton.classList.remove('hidden');
                     
-                    resultDiv.textContent = "Сканер активен. Автоматическое сканирование каждые 15 секунд";
+                    resultDiv.textContent = "Сканер активен. Автоматическое сканирование каждые 5 секунд";
                     
                     // Запускаем первое сканирование сразу
                     performScan();
@@ -279,14 +279,14 @@
                 stopButton.classList.add('hidden');
                 
                 // Сбрасываем таймер
-                secondsLeft = 15;
+                secondsLeft = 5;
                 timerElement.textContent = secondsLeft;
                 
                 resultDiv.textContent = "Сканер выключен. Нажмите 'Включить сканер'";
             }
             
             function startTimer() {
-                secondsLeft = 15;
+                secondsLeft = 5;
                 timerElement.textContent = secondsLeft;
                 
                 // Очищаем предыдущий интервал, если был
@@ -297,7 +297,7 @@
                     timerElement.textContent = secondsLeft;
                     
                     if (secondsLeft <= 0) {
-                        secondsLeft = 15;
+                        secondsLeft = 5;
                         timerElement.textContent = secondsLeft;
                     }
                 }, 1000);
